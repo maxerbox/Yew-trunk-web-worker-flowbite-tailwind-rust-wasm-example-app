@@ -119,6 +119,20 @@ fn convert_date(fragment: SgmlFragment) -> SgmlFragment {
                     _ => {}
                 }
             }
+            // empty TRNTYPE tag
+            SgmlEvent::OpenStartTag { name }
+                if name == "TRNTYPE"
+                    && matches!(
+                        &fragment.as_slice()
+                            [i + INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG],
+                        SgmlEvent::OpenStartTag { .. }
+                    ) =>
+            {
+                transform.insert_at(
+                    i + INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG,
+                    SgmlEvent::Character("POS".into()),
+                );
+            }
             SgmlEvent::Character(_)
             | SgmlEvent::ProcessingInstruction(_)
             | SgmlEvent::MarkupDeclaration { .. }
@@ -139,17 +153,21 @@ fn apply_tranforms_for_transactions(
     transform: &mut Transform,
     i: usize,
 ) {
-    let (before, after) = c.rsplit_once(' ').unwrap();
-    if let Ok(date) = NaiveDate::parse_from_str(after, "%d.%m.%y") {
-        transform.remove_at(i - INDEX_DATE_TOKEN_DELTA_FROM_TRNNAME_OPENTAG);
-        transform.insert_at(
-            i - INDEX_DATE_TOKEN_DELTA_FROM_TRNNAME_OPENTAG,
-            SgmlEvent::Character(date.format("%Y%m%d").to_string().into()),
-        );
-        transform.remove_at(i + INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG);
-        transform.insert_at(
-            i + INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG,
-            SgmlEvent::Character(before.trim().to_owned().into()),
-        );
+    match c.rsplit_once(' ') {
+        Some((before, after)) => {
+            if let Ok(date) = NaiveDate::parse_from_str(after, "%d.%m.%y") {
+                transform.remove_at(i - INDEX_DATE_TOKEN_DELTA_FROM_TRNNAME_OPENTAG);
+                transform.insert_at(
+                    i - INDEX_DATE_TOKEN_DELTA_FROM_TRNNAME_OPENTAG,
+                    SgmlEvent::Character(date.format("%Y%m%d").to_string().into()),
+                );
+                transform.remove_at(i + INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG);
+                transform.insert_at(
+                    i + INDEX_TEXTNODE_NAME_TOKEN_DELTA_FROM_TRNNAME_OPENTAG,
+                    SgmlEvent::Character(before.trim().to_owned().into()),
+                );
+            }
+        }
+        _ => {}
     }
 }

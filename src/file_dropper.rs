@@ -34,11 +34,10 @@ impl Component for FileDropper {
                     on_file_input.emit(text);
                 };
                 let f1 = Closure::once(f1);
-                let ret = (&f1).clone();
                 if let Some(file) = &file {
                     // read the blob text (we could have used a filereader here, but it's more convenient to use a js promise),
                     // once the js promise is resolved, then emit the event
-                    file.text().then(ret);
+                    file.text().then( &f1);
                 }
                 mem::forget(f1);
                 // forget to call the destructor of the Closure, else the function will be destroyed when out of scope.
